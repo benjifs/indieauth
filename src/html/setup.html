@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>barnacle</title>
+		<link rel="stylesheet" type="text/css" href="https://neat.joeldare.com/neat.css">
+	</head>
+	<body>
+		<header><h1>barnacle</h1></header>
+		<main>
+			<p>This is the <a href="https://indieweb.org/indieauth">IndieAuth</a> endpoint for <a href="{{url}}">{{url}}</a> using <a href="https://github.com/benjifs/serverless-indieauth">barnacle</a>.</p>
+			<small class="warn">{{error}}</small>
+			<section>
+				<h2>Setup</h2>
+				<p>To setup, you will need to add the following to the <code>&lt;head&gt;</code> of your website:</p>
+				<pre>
+<code>&lt;link rel=&quot;authorization_endpoint&quot; href=&quot;{{url}}/auth&quot;&gt;
+&lt;link rel=&quot;token_endpoint&quot; href=&quot;{{url}}/token&quot;&gt;</code></pre>
+			</section>
+			<section>
+				<h2>List of valid requests</h2>
+				<dl>
+					<dt><b>GET</b> <code>/auth</code></dt>
+					<dd>Show login form to <a href="#authenticate">Authenticate</a></dd>
+					<dt><b>POST</b> <code>/auth</code></dt>
+					<dd>Exchange <code>code</code> for <a href="#profile-information">Profile Information</a>.</dd>
+					<dt><b>GET</b> <code>/token</code></dt>
+					<dd>Check if <code>token</code> is <a href="#verify-access-token">valid</a>.</dd>
+					<dt><b>POST</b> <code>/token</code></dt>
+					<dd>Exchange <code>code</code> for <a href="#redeem-access-token">Access Token</a>.</dd>
+				</dl>
+			</section>
+			<section id="authenticate">
+				<h2>Authenticate <sup><a href="#ref1">1</a></sup></h2>
+<pre><code>GET {{url}}/auth
+Content-Type: application/x-www-form-urlencoded
+
+response_type=code
+client_id=https://client.example.com/
+redirect_uri=https://client.example.com/redirect
+state=1234567890
+code_challenge=a21ad7a3adbf55e4a2ea8fb524f193a9f999efd0420b72b1311c4e1858172b35
+code_challenge_method=S256
+scope=profile+create+update+delete
+me={{url}}</code></pre>
+				<h3>Response <sup><a href="#ref2">2</a></sup></h3>
+				<p>If you successfully authorize the request, the authorization endpoint will send the authorization <code>code</code> to the <code>redirect_uri</code>.</p>
+<pre><code>HTTP/1.1 302 Found
+Location: https://client.example.com/redirect?code=xxxxxxxx&
+                                              state=1234567890&
+                                              iss={{url}}
+</code></pre>
+			</section>
+
+			<section id="profile-information">
+				<h2>Profile Information</h2>
+<pre><code>POST {{url}}/auth
+Content-Type: application/x-www-form-urlencoded
+Accept: application/json
+
+grant_type=authorization_code
+code=xxxxxxxx
+client_id=https://app.example.com/
+redirect_uri=https://app.example.com/redirect
+code_verifier=746f6f6d616e7973656372657473
+</code></pre>
+				<h3>Response <sup><a href="#ref3">3</a></sup></h3>
+				<p>You can exchange the <code>code</code> for the profile URL for the user <sup><a href="#ref4">4</a></sup>. The response may optionally include the <code>profile</code> information if the <code>code</code> has the valid scopes.</p>
+<pre><code>HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "me": "{{url}}",
+  "profile": {
+    "name": "Example User",
+    "url": "https://www.example.com/",
+    "photo": "https://www.example.com/photo.jpg",
+    "email": "user@example.com"
+  }
+}
+</code></pre>
+			</section>
+
+			<section id="verify-access-token">
+				<h2>Verify Access Token</h2>
+<pre><code>GET {{url}}/token
+Authorization: Bearer xxxxxxxx</code></pre>
+				<h3>Response</h3>
+<pre><code>HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "me": "https://www.example.com",
+  "client_id": "https://client.example.com",
+  "scope": "profile create update delete"
+}
+</code></pre>
+
+or
+
+<pre><code>HTTP/1.1 200 OK
+Content-Type: application/x-www-form-urlencoded
+
+me=https://www.example.com/&
+client_id=https://client.example.com/&
+scope=profile create update delete
+</code></pre>
+			</section>
+
+			<section id="redeem-access-token">
+				<h2>Redeem Access Token</h2>
+<pre><code>POST {{url}}/token
+Content-Type: application/x-www-form-urlencoded
+Accept: application/json
+
+grant_type=authorization_code
+code=xxxxxxxx
+client_id=https://app.example.com/
+redirect_uri=https://app.example.com/redirect
+code_verifier=746f6f6d616e7973656372657473
+</code></pre>
+				<h3>Response <sup><a href="#ref5">5</a></sup></h3>
+<pre><code>HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "access_token": "XXXXXX",
+  "token_type": "Bearer",
+  "scope": "profile create update delete",
+  "me": "{{url}}"
+}
+</code></pre>
+			</section>
+
+			<section>
+				<h2>References</h2>
+				<ol>
+					<li id="ref1"><a href="https://indieauth.spec.indieweb.org/#authorization-request">IndieAuth Spec - Section 5.2 - Authorization Request</a></li>
+					<li id="ref2"><a href="https://indieauth.spec.indieweb.org/#authorization-response">IndieAuth Spec - Section 5.2.1 - Authorization Response</a></li>
+					<li id="ref3"><a href="https://indieauth.spec.indieweb.org/#profile-information">IndieAuth Spec - Section 5.3.4 - Profile Information</a></li>
+					<li id="ref4"><a href="https://indieauth.spec.indieweb.org/#profile-url-response">IndieAuth Spec - Section 5.3.2 - Profile URL Response</a></li>
+					<li id="ref5"><a href="https://indieauth.spec.indieweb.org/#access-token-response">IndieAuth Spec - Section 5.3.3 - Access Token Response</a></li>
+				</ol>
+			</section>
+		</main>
+		<footer>
+			<a href="https://github.com/benjifs/serverless-indieauth">Source Code</a> by
+			<a href="https://benji.dog">benji</a>
+		</footer>
+	</body>
+</html>

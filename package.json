@@ -1,0 +1,39 @@
+{
+  "name": "@benjifs/indieauth",
+  "description": "serverless micropub endpoint",
+  "version": "1.0.0",
+  "main": "src/index.js",
+  "scripts": {
+    "lint": "eslint src"
+  },
+  "keywords": [
+    "indieweb",
+    "indieauth",
+    "serverless"
+  ],
+  "author": "Benji Encalada Mora (https://benji.dog)",
+  "homepage": "https://github.com/benjifs/indieauth",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/benjifs/indieauth.git"
+  },
+  "bugs": {
+    "url": "https://github.com/benjifs/indieauth/issues"
+  },
+  "type": "module",
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "jose": "^6.1.0",
+    "microformats-parser": "^2.0.4"
+  },
+  "engines": {
+    "node": ">=20.x",
+    "npm": ">=8.x"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.33.0",
+    "eslint": "^9.33.0",
+    "globals": "^16.3.0"
+  }
+}

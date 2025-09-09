@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>barnacle</title>
+		<link rel="stylesheet" type="text/css" href="https://neat.joeldare.com/neat.css">
+		<style>
+			html, body { height: 100% }
+			body, main, form footer {
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+			}
+			main {
+				flex: 1;
+				max-width: 550px;
+				justify-content: center;
+			}
+			form {
+				padding: 1em;
+				border: 1px solid light-dark(black, white);
+			}
+			form label, input[type="password"] {
+				display: block;
+				width: 100%;
+			}
+			form > label, form footer { padding: 1em 0 }
+			form footer { gap: .25em }
+		</style>
+	</head>
+	<body>
+		<main>
+			<h1>barnacle</h1>
+			<form method="POST">
+				<h3><a href="{{client_id}}">{{app_logo}}{{app_name}}</a> is requesting permission to access <a href="{{me}}">{{me}}</a></h3>
+				<fieldset>
+					<legend>Scopes</legend>
+					{{scopes}}
+				</fieldset>
+				<label>Password <input type="password" name="password" autocomplete="current-password" required></label>
+				<small class="warn">{{error}}</small>
+				<!-- <input type="hidden" name="_csrf" value="{{csrf}}"> -->
+				<footer>
+					<button type="submit">Authorize</button>
+					<a href="{{client_id}}">Cancel</a>
+				</footer>
+				<small>You will be redirected to <samp>{{redirect_uri}}</samp> after authorizing this application.</small>
+			</form>
+		</main>
+		<footer>
+			<a href="https://github.com/benjifs/serverless-indieauth">Source Code</a> -
+			<a href="https://benji.dog">benji</a>
+		</footer>
+	</body>
+</html>
