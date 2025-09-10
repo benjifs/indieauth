@@ -1,6 +1,6 @@
 {
   "name": "@benjifs/indieauth",
-  "description": "serverless micropub endpoint",
+  "description": "serverless indieauth endpoint",
   "version": "1.0.0",
   "main": "src/index.js",
   "scripts": {
@@ -32,8 +32,8 @@
     "npm": ">=8.x"
   },
   "devDependencies": {
-    "@eslint/js": "^9.33.0",
-    "eslint": "^9.33.0",
-    "globals": "^16.3.0"
+    "@eslint/js": "^9.35.0",
+    "eslint": "^9.35.0",
+    "globals": "^16.4.0"
   }
 }

@@ -89,7 +89,7 @@ export class AuthEndpoint {
 			authorization_response_iss_parameter_supported: true,
 		}
 		// remove empty values just in case they are not defined in the config
-		return Object.fromEntries(Object.entries(metadata).filter(([_, v]) => v != null))
+		return Object.fromEntries(Object.entries(metadata).filter(([, v]) => v != null))
 	}
 
 	showSetup = (url, error = '') => this.#renderTemplate('setup.html', { url, error })
