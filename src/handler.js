@@ -70,7 +70,7 @@ export class AuthHandler {
 		}
 	}
 
-	introspectionEndpolint = async (req) => {
+	introspectionEndpoint = async (req) => {
 		try {
 			if ('POST' !== req.method) throw new StatusError(405, 'method not allowed')
 			const body = await this.#tokenEndpoint.verifyAccessToken(this.#getAuthToken(req))
