@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path'
 import { mf2 } from 'microformats-parser'
 import bcrypt from 'bcryptjs'
 
-import scopeDefinitions from './scopes.js'
+import supportedScopes from './scopes.js'
 import StatusError from './statusError.js'
 import { normalizeMe, encryptToken, decryptToken, isValidToken } from './utils.js'
 
@@ -58,7 +58,7 @@ export class AuthEndpoint {
 	#renderScopes = (scopes = []) => {
 		let output = ''
 		for (const scope of scopes) {
-			output += `<label>${scope} <input type="checkbox" name="scope" value="${scope}" checked>${scopeDefinitions[scope] || 'unknown scope'}</label>`
+			output += `<label>${scope} <input type="checkbox" name="scope" value="${scope}" checked>${supportedScopes[scope] || 'unknown scope'}</label>`
 		}
 		return output || '<small class="warn">No scopes provided</small>'
 	}
@@ -74,6 +74,22 @@ export class AuthEndpoint {
 				'Content-Type': 'text/html; charset=UTF-8',
 			},
 		})
+	}
+
+	getMetadata = ({ issuer, service_documentation, authorization_endpoint, token_endpoint, introspection_endpoint, userinfo_endpoint }) => {
+		const metadata = {
+			issuer,
+			service_documentation: service_documentation || authorization_endpoint,
+			authorization_endpoint,
+			token_endpoint,
+			introspection_endpoint,
+			userinfo_endpoint,
+			scopes_supported: Object.keys(supportedScopes),
+			code_challenge_methods_supported: [ 'S256' ],
+			authorization_response_iss_parameter_supported: true,
+		}
+		// remove empty values just in case they are not defined in the config
+		return Object.fromEntries(Object.entries(metadata).filter(([_, v]) => v != null))
 	}
 
 	showSetup = (url, error = '') => this.#renderTemplate('setup.html', { url, error })
@@ -128,25 +144,26 @@ export class AuthEndpoint {
 		}
 	}
 
+	getUserInfo = async ({ me, scope }) => {
+		if (!scope?.includes('profile')) throw new StatusError(403, 'insufficient_scope')
+		const hcard = await this.#getHCard(me)
+		if (!hcard) return {}
+		return {
+			name: hcard.name,
+			photo: hcard.photo?.value ?? hcard.photo,
+			url: hcard.url,
+			...(scope?.includes('email') && hcard.email && { email: hcard.email.replace('mailto:', '') }),
+		}
+	}
+
 	getProfile = async ({ grant_type, code, client_id, redirect_uri, code_verifier }) => {
 		if ('authorization_code' != grant_type || !code) throw new StatusError(400, 'invalid_request')
 		try {
 			const data = await decryptToken(code, this.#secret)
 			await isValidToken(data, { client_id, redirect_uri, code_verifier })
-			let res = { me: data.me, scope: data.scope }
-			if (data.scope?.includes('profile')) {
-				const hcard = await this.#getHCard(data.me)
-				if (hcard) {
-					res.profile = {
-						name: hcard.name,
-						photo: hcard.photo?.value ?? hcard.photo,
-						url: hcard.url,
-					}
-					if (data.scope?.includes('email') && hcard.email) {
-						res.profile.email = hcard.email.replace('mailto:', '')
-					}
-				}
-			}
+			const res = { me: data.me, scope: data.scope }
+			const profile = await this.getUserInfo(data)
+			if (profile?.name) res.profile = profile
 			return res
 		} catch (err) {
 			throw new StatusError(400, err && err.message)

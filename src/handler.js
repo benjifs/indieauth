@@ -37,8 +37,6 @@ export class AuthHandler {
 	}
 
 	authorizationEndpoint = async (req) => {
-		console.log('authEndpoint', process.env.URL)
-		console.log('->', req.method, req, this.#getAuthToken(req))
 		try {
 			if (!['GET', 'POST'].includes(req.method)) throw new StatusError(405, 'method not allowed')
 			const params = this.#getSearchParams(req)
@@ -57,7 +55,6 @@ export class AuthHandler {
 	}
 
 	tokenEndpoint = async (req) => {
-		console.log('tokenEndpoint', req.method, req, this.#getAuthToken(req))
 		try {
 			if (!['GET', 'POST'].includes(req.method)) throw new StatusError(405, 'method not allowed')
 			if ('GET' === req.method) {
@@ -68,17 +65,35 @@ export class AuthHandler {
 			const body = await this.#tokenEndpoint.redeemAuthorizationCode(form)
 			return HTTPResponse(200, body, req.headers?.get('accept'))
 		} catch (err) {
+			if (401 === err?.statusCode) return HTTPResponse(200, { active: false }, req.headers?.get('accept'))
 			return HTTPResponse(err.statusCode || 500, err.message)
 		}
 	}
 
-	introspect = async (req) => {
+	introspectionEndpolint = async (req) => {
 		try {
 			if ('POST' !== req.method) throw new StatusError(405, 'method not allowed')
 			const body = await this.#tokenEndpoint.verifyAccessToken(this.#getAuthToken(req))
 			return HTTPResponse(200, body, req.headers?.get('accept'))
 		} catch (err) {
+			if (401 === err?.statusCode) return HTTPResponse(200, { active: false }, req.headers?.get('accept'))
 			return HTTPResponse(err.statusCode || 500, err.message)
 		}
+	}
+
+	userInfoEndpoint = async (req) => {
+		try {
+			if ('GET' !== req.method) throw new StatusError(405, 'method not allowed')
+			const token = await this.#tokenEndpoint.verifyAccessToken(this.#getAuthToken(req))
+			const body = await this.#authEndpoint.getUserInfo(token)
+			return HTTPResponse(200, body, req.headers?.get('accept'))
+		} catch (err) {
+			return HTTPResponse(err.statusCode || 500, err.message)
+		}
+	}
+
+	getMetadata = async (req, opts) => {
+		if ('GET' !== req.method) return HTTPResponse(405, 'method not allowed')
+		return HTTPResponse(200, this.#authEndpoint.getMetadata(opts))
 	}
 }

@@ -12,6 +12,7 @@ export class TokenEndpoint {
 
 	verifyAccessToken = async (token) => {
 		if (!this.#secret) throw new StatusError(500, 'Missing "secret"')
+		if (!token) throw new StatusError(401, 'invalid_token')
 		try {
 			const data = await decryptToken(token, this.#secret)
 			return {
@@ -20,7 +21,7 @@ export class TokenEndpoint {
 			}
 		} catch (err) {
 			console.error(err && err.message)
-			return { active: false }
+			throw new StatusError(401, 'invalid_token')
 		}
 	}
 
