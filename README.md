@@ -30,8 +30,8 @@ generate it with:
 
 ### `PASSWORD_SECRET`
 Your password hashed with [bcrypt](https://en.wikipedia.org/wiki/Bcrypt). To do so
-you can either
-- `htpasswd -bnBC 10 "" toomanysecrets | cut -d : -f 2`
+you can either:
+- `htpasswd -bnBC 10 "" toomanysecrets | cut -d : -f 2` where "toomanysecrets" is the password
 - Use [this website](https://www.bcrypt.io/) to create the hash
 
 ## Supported Scopes
