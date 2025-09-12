@@ -32,7 +32,8 @@ export class TokenEndpoint {
 			const data = await decryptToken(code, this.#secret)
 			// Only check if it has a valid scope when redeeming authorization code
 			// https://indieauth.spec.indieweb.org/#access-token-response
-			if (!data?.scope) throw new Error('invalid_request')
+			// IndieLogin fails without any scopes here
+			// if (!data?.scope) throw new Error('invalid_request')
 			await isValidToken(data, { client_id, redirect_uri, code_verifier })
 			const access_token = await encryptToken({
 				me: normalizeMe(data.me),
