@@ -22,6 +22,9 @@ export class AuthEndpoint {
 	#getMFFrom = async (url) => {
 		try {
 			const res = await fetch(url)
+			if (res.headers?.get('content-type').includes('application/json')) {
+				return await res.json()
+			}
 			const html = await res.text()
 			return mf2(html, { baseUrl: url })
 		} catch (err) {
@@ -31,6 +34,14 @@ export class AuthEndpoint {
 
 	#getAppDetails = async (url) => {
 		const mf = await this.#getMFFrom(url)
+		if (!mf) return null
+		if (!mf.items && mf.client_id) {
+			return {
+				name: mf.client_name,
+				logo: mf.logo_uri,
+				url: mf.client_uri,
+			}
+		}
 		const app = mf?.items?.find(i => i.type?.includes('h-app') || i.type?.includes('h-x-app'))?.properties
 		return !app ? null : {
 			name: app.name?.[0] ?? null,
