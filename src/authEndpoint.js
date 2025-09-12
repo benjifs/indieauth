@@ -145,10 +145,9 @@ export class AuthEndpoint {
 	}
 
 	getUserInfo = async ({ me, scope }) => {
-		if (!scope?.includes('profile')) throw new StatusError(403, 'insufficient_scope')
+		if (!scope?.includes('profile')) return {}
 		const hcard = await this.#getHCard(me)
-		if (!hcard) return {}
-		return {
+		return !hcard ? {} : {
 			name: hcard.name,
 			photo: hcard.photo?.value ?? hcard.photo,
 			url: hcard.url,

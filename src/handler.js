@@ -85,6 +85,7 @@ export class AuthHandler {
 		try {
 			if ('GET' !== req.method) throw new StatusError(405, 'method not allowed')
 			const token = await this.#tokenEndpoint.verifyAccessToken(this.#getAuthToken(req))
+			if (!token?.scope?.includes('profile')) throw new StatusError(403, 'insufficient_scope')
 			const body = await this.#authEndpoint.getUserInfo(token)
 			return HTTPResponse(200, body, req.headers?.get('accept'))
 		} catch (err) {
