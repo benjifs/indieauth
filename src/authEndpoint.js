@@ -110,8 +110,11 @@ export class AuthEndpoint {
 	}
 
 	validateLogin = async ({ password, iss }, { me, client_id, redirect_uri, code_challenge, code_challenge_method, state, scope }) => {
+		console.log('validateLogin client_id', client_id)
 		const app = await this.#getAppDetails(client_id)
+		console.log('validateLogin app', app)
 		const scopes = this.#parseScopes(scope)
+		console.log('validateLogin scopes', scopes)
 		try {
 			const isValidPassword = await bcrypt.compare(password, this.#passwordSecret)
 			if (!isValidPassword) throw new StatusError(401, 'Invalid Password')
@@ -158,10 +161,14 @@ export class AuthEndpoint {
 	getProfile = async ({ grant_type, code, client_id, redirect_uri, code_verifier }) => {
 		if ('authorization_code' != grant_type || !code) throw new StatusError(400, 'invalid_request')
 		try {
+			console.log('code', code)
 			const data = await decryptToken(code, this.#secret)
+			console.log('data', data)
 			await isValidToken(data, { client_id, redirect_uri, code_verifier })
+			console.log('isValid')
 			const res = { me: data.me, scope: data.scope }
 			const profile = await this.getUserInfo(data)
+			console.log('profile', profile)
 			if (profile?.name) res.profile = profile
 			return res
 		} catch (err) {
