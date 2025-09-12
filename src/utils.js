@@ -19,7 +19,7 @@ export const decryptToken = async (token, secret) => {
 }
 
 export const isValidToken = async (token, { client_id, redirect_uri, code_verifier }) => {
-	if (!token || token.client_id != client_id || token.redirect_uri != redirect_uri || !token.scope) throw new Error('invalid_request')
+	if (!token || token.client_id != client_id || token.redirect_uri != redirect_uri) throw new Error('invalid_request')
 	if (token.code_challenge && token.code_challenge_method) {
 		const code_challenge = await generateCodeChallenge(token.code_challenge_method, code_verifier)
 		if (code_challenge != token.code_challenge) throw new Error('invalid_request')

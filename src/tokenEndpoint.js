@@ -30,6 +30,9 @@ export class TokenEndpoint {
 		if ('authorization_code' != grant_type || !code) throw new StatusError(400, 'invalid_request')
 		try {
 			const data = await decryptToken(code, this.#secret)
+			// Only check if it has a valid scope when redeeming authorization code
+			// https://indieauth.spec.indieweb.org/#access-token-response
+			if (!data?.scope) throw new Error('invalid_request')
 			await isValidToken(data, { client_id, redirect_uri, code_verifier })
 			const access_token = await encryptToken({
 				me: normalizeMe(data.me),
