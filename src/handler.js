@@ -65,6 +65,7 @@ export class AuthHandler {
 				return HTTPResponse(200, body, req.headers?.get('accept'))
 			}
 			const form = await this.#getFormData(req)
+			console.log('here 001', req.method, form)
 			const body = await this.#tokenEndpoint.redeemAuthorizationCode(form)
 			return HTTPResponse(200, body, req.headers?.get('accept'))
 		} catch (err) {
