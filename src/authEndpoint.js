@@ -122,11 +122,8 @@ export class AuthEndpoint {
 	}
 
 	validateLogin = async ({ password, iss }, { me, client_id, redirect_uri, code_challenge, code_challenge_method, state, scope }) => {
-		console.log('validateLogin client_id', client_id)
 		const app = await this.#getAppDetails(client_id)
-		console.log('validateLogin app', app)
 		const scopes = this.#parseScopes(scope)
-		console.log('validateLogin scopes', scopes)
 		try {
 			const isValidPassword = await bcrypt.compare(password, this.#passwordSecret)
 			if (!isValidPassword) throw new StatusError(401, 'Invalid Password')
@@ -139,6 +136,7 @@ export class AuthEndpoint {
 				code_challenge_method,
 				scope,
 			}, this.#secret)
+			console.log('code generated', code)
 			return new Response('success', {
 				status: 302,
 				headers: {

@@ -45,9 +45,8 @@ export class AuthHandler {
 					return await this.#authEndpoint.showLoginForm(params, process.env.URL)
 				return this.#authEndpoint.showSetup(process.env.URL)
 			}
-			console.log('here')
 			const form = await this.#getFormData(req)
-			console.log('here 2', form)
+			console.log('here 000', req.method, form)
 			if (!form.grant_type) return await this.#authEndpoint.validateLogin({ ...form, iss: process.env.URL}, params)
 			console.log('here 3', form)
 			const body = await this.#authEndpoint.getProfile(form)
