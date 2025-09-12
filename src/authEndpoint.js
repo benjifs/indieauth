@@ -115,6 +115,7 @@ export class AuthEndpoint {
 			redirect_uri,
 			client_id,
 			app_name: app?.name || client_id,
+			app_url: app?.url || client_id,
 			app_logo: app?.logo ? `<img src="${app.logo.value || app.logo}" ${app.logo.alt ? `alt="${app.logo.alt}"` : ''} width="24">` : '',
 			scopes,
 		})
