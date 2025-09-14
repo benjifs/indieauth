@@ -1,12 +1,12 @@
 import fs from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
-import { mf2 } from 'microformats-parser'
 import bcrypt from 'bcryptjs'
 
 import supportedScopes from './scopes.js'
 import StatusError from './statusError.js'
 import { normalizeMe, encryptToken, decryptToken, isValidToken } from './utils.js'
+import { getAppDetails, getUserInfo } from './parse.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -17,48 +17,6 @@ export class AuthEndpoint {
 	constructor({ secret, passwordSecret }) {
 		this.#secret = secret
 		this.#passwordSecret = passwordSecret
-	}
-
-	#getMFFrom = async (url) => {
-		try {
-			const res = await fetch(url)
-			if (res.headers?.get('content-type').includes('application/json')) {
-				return await res.json()
-			}
-			const html = await res.text()
-			return mf2(html, { baseUrl: url })
-		} catch (err) {
-			console.error('Could not fetch app details', err)
-		}
-	}
-
-	#getAppDetails = async (url) => {
-		const mf = await this.#getMFFrom(url)
-		if (!mf) return null
-		if (!mf.items && mf.client_id) {
-			return {
-				name: mf.client_name,
-				logo: mf.logo_uri,
-				url: mf.client_uri,
-			}
-		}
-		const app = mf?.items?.find(i => i.type?.includes('h-app') || i.type?.includes('h-x-app'))?.properties
-		return !app ? null : {
-			name: app.name?.[0] ?? null,
-			logo: app.logo?.[0] ?? null,
-			url: app.url?.[0] ?? null,
-		}
-	}
-
-	#getHCard = async (url) => {
-		const mf = await this.#getMFFrom(url)
-		const hcard = mf?.items?.find(i => i.type?.includes('h-card'))?.properties
-		return !hcard ? null : {
-			name: hcard.name?.[0] ?? null,
-			photo: hcard.photo?.[0] ?? null,
-			url: hcard.url?.[0] ?? null,
-			email: hcard.email?.[0] ?? null,
-		}
 	}
 
 	#parseScopes = scopes => {
@@ -108,7 +66,7 @@ export class AuthEndpoint {
 	showLoginForm = async ({ me, client_id, redirect_uri, scope }, url) => {
 		if (!this.#secret) return this.showSetup(url, 'Configuration error: Missing "secret"')
 		if (!this.#passwordSecret) return this.showSetup(url, 'Configuration error: Missing "passwordSecret"')
-		const app = await this.#getAppDetails(client_id)
+		const app = await getAppDetails(client_id)
 		const scopes = this.#parseScopes(scope)
 		return this.#renderTemplate('login.html', {
 			me: normalizeMe(me),
@@ -122,7 +80,7 @@ export class AuthEndpoint {
 	}
 
 	validateLogin = async ({ password, iss }, { me, client_id, redirect_uri, code_challenge, code_challenge_method, state, scope }) => {
-		const app = await this.#getAppDetails(client_id)
+		const app = await getAppDetails(client_id)
 		const scopes = this.#parseScopes(scope)
 		try {
 			const isValidPassword = await bcrypt.compare(password, this.#passwordSecret)
@@ -136,7 +94,6 @@ export class AuthEndpoint {
 				code_challenge_method,
 				scope,
 			}, this.#secret)
-			console.log('code generated', code)
 			return new Response('success', {
 				status: 302,
 				headers: {
@@ -157,28 +114,15 @@ export class AuthEndpoint {
 		}
 	}
 
-	getUserInfo = async ({ me, scope }) => {
-		if (!scope?.includes('profile')) return {}
-		const hcard = await this.#getHCard(me)
-		return !hcard ? {} : {
-			name: hcard.name,
-			photo: hcard.photo?.value ?? hcard.photo,
-			url: hcard.url,
-			...(scope?.includes('email') && hcard.email && { email: hcard.email.replace('mailto:', '') }),
-		}
-	}
+	getUserInfo = getUserInfo
 
 	getProfile = async ({ grant_type, code, client_id, redirect_uri, code_verifier }) => {
 		if ('authorization_code' != grant_type || !code) throw new StatusError(400, 'invalid_request')
 		try {
-			console.log('code', code)
 			const data = await decryptToken(code, this.#secret)
-			console.log('data', data)
 			await isValidToken(data, { client_id, redirect_uri, code_verifier })
-			console.log('isValid')
 			const res = { me: data.me, scope: data.scope }
-			const profile = await this.getUserInfo(data)
-			console.log('profile', profile)
+			const profile = await getUserInfo(data)
 			if (profile?.name) res.profile = profile
 			return res
 		} catch (err) {

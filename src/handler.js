@@ -46,11 +46,8 @@ export class AuthHandler {
 				return this.#authEndpoint.showSetup(process.env.URL)
 			}
 			const form = await this.#getFormData(req)
-			console.log('here 000', req.method, form)
 			if (!form.grant_type) return await this.#authEndpoint.validateLogin({ ...form, iss: process.env.URL}, params)
-			console.log('here 3', form)
 			const body = await this.#authEndpoint.getProfile(form)
-			console.log('here 4', body)
 			return HTTPResponse(200, body, req.headers?.get('accept'))
 		} catch (err) {
 			return HTTPResponse(err.statusCode || 500, err.message)
@@ -65,7 +62,6 @@ export class AuthHandler {
 				return HTTPResponse(200, body, req.headers?.get('accept'))
 			}
 			const form = await this.#getFormData(req)
-			console.log('here 001', req.method, form)
 			const body = await this.#tokenEndpoint.redeemAuthorizationCode(form)
 			return HTTPResponse(200, body, req.headers?.get('accept'))
 		} catch (err) {
