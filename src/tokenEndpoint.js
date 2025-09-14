@@ -1,5 +1,6 @@
 import StatusError from './statusError.js'
 import { normalizeMe, encryptToken, decryptToken, isValidToken } from './utils.js'
+import { getUserInfo } from './parse.js'
 
 const EXPIRATION = 90
 
@@ -30,10 +31,11 @@ export class TokenEndpoint {
 		if ('authorization_code' != grant_type || !code) throw new StatusError(400, 'invalid_request')
 		try {
 			const data = await decryptToken(code, this.#secret)
-			// Only check if it has a valid scope when redeeming authorization code
-			// https://indieauth.spec.indieweb.org/#access-token-response
-			if (!data?.scope) throw new Error('invalid_request')
 			await isValidToken(data, { client_id, redirect_uri, code_verifier })
+			// Only issue `access_token` if there is at least one `scope`
+			// https://indieauth.spec.indieweb.org/#access-token-response
+			if (!data?.scope) return { me: normalizeMe(data.me) }
+			const profile = await getUserInfo(data)
 			const access_token = await encryptToken({
 				me: normalizeMe(data.me),
 				client_id: data.client_id,
@@ -45,6 +47,7 @@ export class TokenEndpoint {
 				token_type: 'Bearer',
 				scope: data.scope,
 				me: normalizeMe(data.me),
+				...(profile?.url && { profile }),
 				expires_in: EXPIRATION * 24 * 60 * 60,
 			}
 		} catch (err) {
