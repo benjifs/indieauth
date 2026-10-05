@@ -43,7 +43,7 @@
 				<!-- <input type="hidden" name="_csrf" value="{{csrf}}"> -->
 				<footer>
 					<button type="submit">Authorize</button>
-					<a href="{{client_id}}">Cancel</a>
+					<a href="{{redirect_uri}}?error=access_denied&state={{state}}&iss={{iss}}">Cancel</a>
 				</footer>
 				<small>You will be redirected to <samp>{{redirect_uri}}</samp> after authorizing this application.</small>
 			</form>

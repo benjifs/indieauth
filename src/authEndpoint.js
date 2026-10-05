@@ -1,22 +1,22 @@
 import fs from 'node:fs/promises'
-import { fileURLToPath } from 'node:url'
-import { dirname, join } from 'node:path'
+import { join } from 'node:path'
 import bcrypt from 'bcryptjs'
 
 import supportedScopes from './scopes.js'
 import StatusError from './statusError.js'
-import { normalizeMe, encryptToken, decryptToken, isValidToken } from './utils.js'
+import HTTPResponse from './HTTPResponse.js'
+import { normalizeMe, generateJWT, verifyJWT, isValidToken, generateJWKS } from './utils.js'
 import { getAppDetails, getUserInfo } from './parse.js'
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
-
 export class AuthEndpoint {
-	#secret
 	#passwordSecret
+	#privateKey
+	#publicKey
 
-	constructor({ secret, passwordSecret }) {
-		this.#secret = secret
+	constructor({ passwordSecret, privateKey, publicKey }) {
 		this.#passwordSecret = passwordSecret
+		this.#privateKey = privateKey
+		this.#publicKey = publicKey
 	}
 
 	#parseScopes = scopes => {
@@ -37,22 +37,13 @@ export class AuthEndpoint {
 		let html = await fs.readFile(filePath, { encoding: 'utf-8' })
 		html = html.replace('{{scopes}}', this.#renderScopes(tokens.scopes))
 		html = html.replace(/{{(\w+)}}/g, (_, key) => tokens[key] ?? '')
-		return new Response(html, {
-			status,
-			headers: {
-				'Content-Type': 'text/html; charset=UTF-8',
-			},
-		})
+		return HTTPResponse(status, html, { 'Content-Type': 'text/html; charset=UTF-8' })
 	}
 
-	getMetadata = ({ issuer, service_documentation, authorization_endpoint, token_endpoint, introspection_endpoint, userinfo_endpoint }) => {
+	getMetadata = (values) => {
 		const metadata = {
-			issuer,
-			service_documentation: service_documentation || authorization_endpoint,
-			authorization_endpoint,
-			token_endpoint,
-			introspection_endpoint,
-			userinfo_endpoint,
+			...values,
+			service_documentation: values.service_documentation || values.authorization_endpoint,
 			scopes_supported: Object.keys(supportedScopes),
 			code_challenge_methods_supported: [ 'S256' ],
 			authorization_response_iss_parameter_supported: true,
@@ -63,9 +54,10 @@ export class AuthEndpoint {
 
 	showSetup = (url, error = '') => this.#renderTemplate('setup.html', { url, error })
 
-	showLoginForm = async ({ me, client_id, redirect_uri, scope }, url) => {
-		if (!this.#secret) return this.showSetup(url, 'Configuration error: Missing "secret"')
+	showLoginForm = async ({ me, client_id, redirect_uri, scope, state, issuer }, url) => {
 		if (!this.#passwordSecret) return this.showSetup(url, 'Configuration error: Missing "passwordSecret"')
+		if (!this.#privateKey) return this.showSetup(url, 'Configuration error: Missing "privateKey"')
+		if (!this.#publicKey) return this.showSetup(url, 'Configuration error: Missing "#publicKey"')
 		const app = await getAppDetails(client_id)
 		const scopes = this.#parseScopes(scope)
 		return this.#renderTemplate('login.html', {
@@ -73,9 +65,12 @@ export class AuthEndpoint {
 			redirect_uri,
 			client_id,
 			app_name: app?.name || client_id,
-			app_url: app?.url || client_id,
+			app_url: client_id,
 			app_logo: app?.logo ? `<img src="${app.logo.value || app.logo}" ${app.logo.alt ? `alt="${app.logo.alt}"` : ''} width="24">` : '',
 			scopes,
+			state,
+			url,
+			issuer,
 		})
 	}
 
@@ -85,7 +80,7 @@ export class AuthEndpoint {
 		try {
 			const isValidPassword = await bcrypt.compare(password, this.#passwordSecret)
 			if (!isValidPassword) throw new StatusError(401, 'Invalid Password')
-			const code = await encryptToken({
+			const code = await generateJWT({
 				me: normalizeMe(me),
 				client_id,
 				redirect_uri,
@@ -93,7 +88,7 @@ export class AuthEndpoint {
 				code_challenge,
 				code_challenge_method,
 				scope,
-			}, this.#secret)
+			}, this.#privateKey)
 			return new Response('success', {
 				status: 302,
 				headers: {
@@ -117,9 +112,11 @@ export class AuthEndpoint {
 	getUserInfo = getUserInfo
 
 	getProfile = async ({ grant_type, code, client_id, redirect_uri, code_verifier }) => {
-		if ('authorization_code' != grant_type || !code) throw new StatusError(400, 'invalid_request')
+		if (!grant_type) throw new StatusError(400, 'invalid_request')
+		if ('authorization_code' != grant_type) throw new StatusError(400, 'unsupported_grant_type')
+		if (!code) throw new StatusError(400, 'invalid_request')
 		try {
-			const data = await decryptToken(code, this.#secret)
+			const data = await verifyJWT(code, this.#publicKey)
 			await isValidToken(data, { client_id, redirect_uri, code_verifier })
 			const res = { me: data.me, scope: data.scope }
 			const profile = await getUserInfo(data)
@@ -129,4 +126,6 @@ export class AuthEndpoint {
 			throw new StatusError(400, err && err.message)
 		}
 	}
+
+	generateJWKS = () => generateJWKS(this.#publicKey)
 }
