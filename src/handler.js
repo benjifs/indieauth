@@ -1,17 +1,7 @@
 import { AuthEndpoint } from './authEndpoint.js'
 import { TokenEndpoint } from './tokenEndpoint.js'
 import StatusError from './statusError.js'
-
-const HTTPResponse = (status = 200, body, contentType) => {
-	if (!contentType) contentType = 'application/json'
-	if (typeof body === 'object' && body !== null) {
-		body = 'application/json' === contentType ? JSON.stringify(body) : new URLSearchParams(body)
-	}
-	return new Response(body, {
-		status,
-		headers: { 'Content-Type': contentType },
-	})
-}
+import HTTPResponse from './HTTPResponse.js'
 
 export class AuthHandler {
 	#authEndpoint
@@ -48,7 +38,7 @@ export class AuthHandler {
 			const form = await this.#getFormData(req)
 			if (!form.grant_type) return await this.#authEndpoint.validateLogin({ ...form, iss: process.env.URL}, params)
 			const body = await this.#authEndpoint.getProfile(form)
-			return HTTPResponse(200, body, req.headers?.get('accept'))
+			return HTTPResponse(200, body, { 'Content-Type': req.headers?.get('accept') })
 		} catch (err) {
 			return HTTPResponse(err.statusCode || 500, err.message)
 		}
@@ -59,14 +49,16 @@ export class AuthHandler {
 			if (!['GET', 'POST'].includes(req.method)) throw new StatusError(405, 'method not allowed')
 			if ('GET' === req.method) {
 				const body = await this.#tokenEndpoint.verifyAccessToken(this.#getAuthToken(req))
-				return HTTPResponse(200, body, req.headers?.get('accept'))
+				return HTTPResponse(200, body, { 'Content-Type': req.headers?.get('accept') })
 			}
 			const form = await this.#getFormData(req)
 			const body = await this.#tokenEndpoint.redeemAuthorizationCode(form)
-			return HTTPResponse(200, body, req.headers?.get('accept'))
+			return HTTPResponse(200, body, {
+				'Content-Type': req.headers?.get('accept'),
+				'Cache-Control': 'no-store',
+			})
 		} catch (err) {
-			if (401 === err?.statusCode) return HTTPResponse(200, { active: false }, req.headers?.get('accept'))
-			return HTTPResponse(err.statusCode || 500, err.message)
+			return HTTPResponse(err.statusCode, { active: false, error: err.message }, { 'Content-Type': req.headers?.get('accept') })
 		}
 	}
 
@@ -74,10 +66,9 @@ export class AuthHandler {
 		try {
 			if ('POST' !== req.method) throw new StatusError(405, 'method not allowed')
 			const body = await this.#tokenEndpoint.verifyAccessToken(this.#getAuthToken(req))
-			return HTTPResponse(200, body, req.headers?.get('accept'))
+			return HTTPResponse(200, body, { 'Content-Type': req.headers?.get('accept') })
 		} catch (err) {
-			if (401 === err?.statusCode) return HTTPResponse(200, { active: false }, req.headers?.get('accept'))
-			return HTTPResponse(err.statusCode || 500, err.message)
+			return HTTPResponse(err.statusCode, { active: false, error: err.message }, { 'Content-Type': req.headers?.get('accept') })
 		}
 	}
 
@@ -87,9 +78,11 @@ export class AuthHandler {
 			const token = await this.#tokenEndpoint.verifyAccessToken(this.#getAuthToken(req))
 			if (!token?.scope?.includes('profile')) throw new StatusError(403, 'insufficient_scope')
 			const body = await this.#authEndpoint.getUserInfo(token)
-			return HTTPResponse(200, body, req.headers?.get('accept'))
+			return HTTPResponse(200, body, { 'Content-Type': req.headers?.get('accept') })
 		} catch (err) {
-			return HTTPResponse(err.statusCode || 500, err.message)
+			// S703 Refuses an invalid token
+			const statusCode = err.message === 'invalid_token' ? 401 : err.statusCode
+			return HTTPResponse(statusCode || 500, err.message)
 		}
 	}
 
