@@ -1,6 +1,4 @@
 import fs from 'node:fs/promises'
-// import { dirname, join } from 'node:path'
-// import { fileURLToPath } from 'node:url'
 import bcrypt from 'bcryptjs'
 
 import supportedScopes from './scopes.js'
@@ -8,8 +6,6 @@ import StatusError from './statusError.js'
 import HTTPResponse from './HTTPResponse.js'
 import { normalizeMe, generateJWT, verifyJWT, isValidToken, generateJWKS } from './utils.js'
 import { getAppDetails, getUserInfo } from './parse.js'
-
-// const __dirname = dirname(fileURLToPath(import.meta.url))
 
 export class AuthEndpoint {
 	#passwordSecret
@@ -36,7 +32,6 @@ export class AuthEndpoint {
 	}
 
 	#renderTemplate = async (template, tokens = {}, status = 200) => {
-		// const filePath = join(__dirname, '../src/html', template)
 		const filePath = new URL(`../src/html/${template}`, import.meta.url)
 		let html = await fs.readFile(filePath, { encoding: 'utf-8' })
 		html = html.replace('{{scopes}}', this.#renderScopes(tokens.scopes))
