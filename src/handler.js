@@ -90,4 +90,10 @@ export class AuthHandler {
 		if ('GET' !== req.method) return HTTPResponse(405, 'method not allowed')
 		return HTTPResponse(200, this.#authEndpoint.getMetadata(opts))
 	}
+
+	getJWKS = async (req) => {
+		if ('GET' !== req.method) return HTTPResponse(405, 'method not allowed')
+		const jwks = await this.#authEndpoint.generateJWKS()
+		return HTTPResponse(200, jwks, { 'Content-Type': 'application/json' })
+	}
 }
