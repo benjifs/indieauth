@@ -43,7 +43,7 @@ export const generateJWKS = async (publicKey) => {
 			alg: TOKEN_HEADERS.alg,
 			kid: TOKEN_HEADERS.kid,
 			use: 'sig',
-		}]
+		}],
 	}
 }
 

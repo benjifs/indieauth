@@ -1,6 +1,5 @@
 import fs from 'node:fs/promises'
-import { fileURLToPath } from 'node:url'
-import { dirname, join } from 'node:path'
+import { join } from 'node:path'
 import bcrypt from 'bcryptjs'
 
 import supportedScopes from './scopes.js'
@@ -8,8 +7,6 @@ import StatusError from './statusError.js'
 import HTTPResponse from './HTTPResponse.js'
 import { normalizeMe, generateJWT, verifyJWT, isValidToken, generateJWKS } from './utils.js'
 import { getAppDetails, getUserInfo } from './parse.js'
-
-// const __dirname = dirname(fileURLToPath(import.meta.url))
 
 export class AuthEndpoint {
 	#passwordSecret
@@ -73,6 +70,7 @@ export class AuthEndpoint {
 			scopes,
 			state,
 			url,
+			issuer,
 		})
 	}
 
